@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETF 매매일지</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg: #07090f;
+    --surface: #0e1420;
+    --surface2: #141c2e;
+    --border: #1a2540;
+    --accent: #00c8ff;
+    --green: #00e676;
+    --red: #ff4d4d;
+    --yellow: #ffc107;
+    --text: #d0dff0;
+    --muted: #3d5070;
+    --muted2: #6b85a8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted2);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+
+  /* TABS */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── UPLOAD TAB ── */
+  .upload-section {
+    padding: 24px 20px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .upload-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .upload-desc {
+    font-size: 12px;
+    color: var(--muted2);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(0,200,255,0.04);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-icon { font-size: 36px; margin-bottom: 12px; }
+
+  .drop-text {
+    font-size: 14px;
+    color: var(--muted2);
+    margin-bottom: 6px;
+  }
+
+  .drop-hint {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* PREVIEW */
+  .preview-area {
+    margin-top: 16px;
+    display: none;
+  }
+
+  .preview-area.show { display: block; }
+
+  .preview-img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .analyze-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+  }
+
+  .analyze-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* LOADING */
+  .loading-area {
+    display: none;
+    text-align: center;
+    padding: 30px;
+  }
+
+  .loading-area.show { display: block; }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted2);
+  }
+
+  /* RESULT AREA */
+  .result-area {
+    margin-top: 20px;
+    display: none;
+  }
+
+  .result-area.show { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .result-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    font-family: 'IBM Plex Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .trade-date {
+    font-size: 11px;
+    color: var(--muted2);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* TRADE CARDS */
+  .trade-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .trade-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .trade-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .trade-name {
+    font-size: 13px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .trade-type {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .type-buy { background: rgba(255,77,77,0.15); color: var(--red); }
+  .type-sell { background: rgba(68,136,255,0.15); color: #4488ff; }
+
+  .trade-nums {
+    display: flex;
+    gap: 16px;
+  }
+
+  .trade-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  .num-label {
+    color: var(--muted2);
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  .num-value { color: var(--text); font-weight: 600; }
+
+  /* PRINCIPLE CHECK IN RESULT */
+  .principle-mini {
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .p-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted2);
+  }
+
+  .p-row input { accent-color: var(--accent); }
+
+  .memo-field {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Noto Sans KR', sans-serif;
+    width: 100%;
+    outline: none;
+    resize: none;
+  }
+
+  .memo-field:focus { border-color: var(--accent); }
+
+  .save-all-btn {
+    width: 100%;
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 13px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    margin-top: 12px;
+    transition: opacity 0.2s;
+  }
+
+  .save-all-btn:active { opacity: 0.8; }
+
+  /* ── JOURNAL TAB ── */
+  .journal-section { padding: 0; }
+
+  .journal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .journal-title {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+  }
+
+  .clear-btn {
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  /* DATE GROUP */
+  .date-group { border-bottom: 1px solid var(--border); }
+
+  .date-label {
+    padding: 10px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .date-summary {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+  }
+
+  .journal-row {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .journal-row:last-child { border-bottom: none; }
+
+  .j-type {
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .j-name { flex: 1; font-size: 13px; font-weight: 500; }
+
+  .j-nums {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .j-qty {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .j-amount {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+  }
+
+  .j-memo {
+    font-size: 10px;
+    color: var(--muted2);
+    padding: 0 20px 8px;
+    font-style: italic;
+  }
+
+  .j-checks {
+    padding: 0 20px 10px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .check-tag {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .check-ok { background: rgba(0,230,118,0.1); color: var(--green); }
+  .check-no { background: rgba(255,77,77,0.1); color: var(--red); }
+
+  .empty-journal {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 2;
+  }
+
+  /* ── STATS TAB ── */
+  .stats-section { padding: 20px; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .stat-card-label {
+    font-size: 10px;
+    color: var(--muted2);
+    margin-bottom: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .stat-card-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .principle-stats {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .ps-title {
+    font-size: 12px;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+
+  .ps-bar {
+    margin-bottom: 12px;
+  }
+
+  .ps-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .ps-label span:first-child { color: var(--text); }
+  .ps-label span:last-child { color: var(--accent); font-family: 'IBM Plex Mono', monospace; }
+
+  .ps-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .ps-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* ERROR */
+  .error-box {
+    background: rgba(255,77,77,0.1);
+    border: 1px solid rgba(255,77,77,0.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 12px;
+    display: none;
+  }
+
+  .error-box.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    ETF JOURNAL
+  </div>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('upload', this)">📸 캡처 분석</button>
+    <button class="tab-btn" onclick="switchTab('journal', this)">📋 매매일지</button>
+    <button class="tab-btn" onclick="switchTab('stats', this)">📊 통계</button>
+  </div>
+</header>
+
+<!-- ── UPLOAD TAB ── -->
+<div class="tab-content active" id="tab-upload">
+  <div class="upload-section">
+    <div class="upload-title">나무증권 매매내역 자동 인식</div>
+    <div class="upload-desc">
+      나무증권 앱 → 주식 잔고·손익 → 일별 매매내역 화면을 캡처해서 올려주세요.<br>
+      AI가 종목명, 매매구분, 수량, 금액을 자동으로 읽어드려요.
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept="image/*" onchange="handleFile(this.files[0])">
+      <div class="drop-icon">📷</div>
+      <div class="drop-text">여기를 눌러 캡처 이미지 선택</div>
+      <div class="drop-hint">JPG / PNG / WEBP 지원</div>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <img id="previewImg" class="preview-img" src="" alt="미리보기">
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyzeImage()">
+        🤖 AI로 매매내역 자동 인식
+      </button>
+    </div>
+
+    <div class="loading-area" id="loadingArea">
+      <div class="spinner"></div>
+      <div class="loading-text">매매내역을 읽고 있어요...</div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="result-area" id="resultArea">
+      <div class="result-header">
+        <div class="result-title">✓ 인식 완료</div>
+        <div class="trade-date" id="tradeDate"></div>
+      </div>
+      <div class="trade-list" id="tradeList"></div>
+      <button class="save-all-btn" onclick="saveAll()">📋 매매일지에 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── JOURNAL TAB ── -->
+<div class="tab-content" id="tab-journal">
+  <div class="journal-section">
+    <div class="journal-header">
+      <div class="journal-title">TRADE LOG</div>
+      <button class="clear-btn" onclick="clearAll()">전체 삭제</button>
+    </div>
+    <div id="journalContent"></div>
+  </div>
+</div>
+
+<!-- ── STATS TAB ── -->
+<div class="tab-content" id="tab-stats">
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-label">총 매매 건수</div>
+        <div class="stat-card-value" id="st-total">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">매수 건수</div>
+        <div class="stat-card-value up" id="st-buy">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">매도 건수</div>
+        <div class="stat-card-value down" id="st-sell">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">기록 일수</div>
+        <div class="stat-card-value" id="st-days">0</div>
+      </div>
+    </div>
+
+    <div class="principle-stats">
+      <div class="ps-title">PRINCIPLE ADHERENCE — 원칙 준수율</div>
+      <div id="principleStats"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PRINCIPLES = [
+  '고점·저점 모두 우상향 구조',
+  '단기 + 중기 모두 우상향',
+  '지지부진 or 단기하락 아님',
+  '비중 총자산 1/10 이내',
+  '강한 섹터 모멘텀 살아있음'
+];
+
+// ── Storage ──
+function loadJournal() {
+  try { return JSON.parse(localStorage.getItem('etf_journal_v1') || '[]'); }
+  catch { return []; }
+}
+
+function saveJournal(data) {
+  localStorage.setItem('etf_journal_v1', JSON.stringify(data));
+}
+
+// ── Tabs ──
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'journal') renderJournal();
+  if (tab === 'stats') renderStats();
+}
+
+// ── File handling ──
+let currentFile = null;
+let currentBase64 = null;
+
+function handleFile(file) {
+  if (!file) return;
+  currentFile = file;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    currentBase64 = e.target.result.split(',')[1];
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('previewArea').classList.add('show');
+    document.getElementById('resultArea').classList.remove('show');
+    document.getElementById('errorBox').classList.remove('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Drag & drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// ── AI Analysis ──
+async function analyzeImage() {
+  if (!currentBase64) return;
+
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('loadingArea').classList.add('show');
+  document.getElementById('resultArea').classList.remove('show');
+  document.getElementById('errorBox').classList.remove('show');
+
+  const prompt = `이 이미지는 나무증권(Namuh) 앱의 "일별 매매내역" 화면입니다.
+
+다음 정보를 JSON으로만 추출해주세요. JSON 외에 다른 텍스트는 절대 출력하지 마세요.
+
+형식:
+{
+  "date": "YYYY-MM-DD",
+  "trades": [
+    {
+      "name": "ETF 종목명 (예: TIGER 차이나테크TOP10)",
+      "type": "매수 또는 매도",
+      "quantity": 숫자,
+      "amount": 숫자 (체결금액, 없으면 0)
+    }
+  ]
+}
+
+규칙:
+- 종목명과 매매구분(현금매수/현금매도)이 쌍으로 나옵니다
+- 현금매수 → type: "매수", 현금매도 → type: "매도"
+- 체결수량이 0인 경우도 포함
+- 날짜가 보이면 추출, 없으면 오늘 날짜 사용`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: currentFile.type || 'image/jpeg',
+                data: currentBase64
+              }
+            },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content?.map(c => c.text || '').join('');
+    
+    // Parse JSON
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    document.getElementById('loadingArea').classList.remove('show');
+    renderResult(parsed);
+
+  } catch (err) {
+    document.getElementById('loadingArea').classList.remove('show');
+    document.getElementById('analyzeBtn').disabled = false;
+    const box = document.getElementById('errorBox');
+    box.textContent = '인식 중 오류가 발생했어요. 이미지를 다시 확인하고 시도해주세요. (' + err.message + ')';
+    box.classList.add('show');
+  }
+}
+
+// ── Render Result ──
+let currentParsed = null;
+
+function renderResult(parsed) {
+  currentParsed = parsed;
+
+  document.getElementById('tradeDate').textContent = parsed.date || '';
+
+  const list = document.getElementById('tradeList');
+  list.innerHTML = parsed.trades.map((t, i) => `
+    <div class="trade-card" id="card-${i}">
+      <div class="trade-top">
+        <div class="trade-name">${t.name}</div>
+        <span class="trade-type ${t.type === '매수' ? 'type-buy' : 'type-sell'}">${t.type}</span>
+      </div>
+      <div class="trade-nums">
+        <div class="trade-num">
+          <div class="num-label">체결수량</div>
+          <div class="num-value">${t.quantity}주</div>
+        </div>
+        <div class="trade-num">
+          <div class="num-label">체결금액</div>
+          <div class="num-value">${t.amount > 0 ? t.amount.toLocaleString() + '원' : '-'}</div>
+        </div>
+      </div>
+      <div class="principle-mini">
+        ${PRINCIPLES.map((p, pi) => `
+          <div class="p-row">
+            <input type="checkbox" id="pc-${i}-${pi}">
+            <label for="pc-${i}-${pi}">${p}</label>
+          </div>
+        `).join('')}
+      </div>
+      <textarea class="memo-field" id="memo-${i}" placeholder="판단 메모 (선택사항)" rows="2"></textarea>
+    </div>
+  `).join('');
+
+  document.getElementById('resultArea').classList.add('show');
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+// ── Save All ──
+function saveAll() {
+  if (!currentParsed) return;
+
+  const journal = loadJournal();
+
+  currentParsed.trades.forEach((t, i) => {
+    const checks = PRINCIPLES.map((_, pi) =>
+      document.getElementById(`pc-${i}-${pi}`)?.checked || false
+    );
+    const memo = document.getElementById(`memo-${i}`)?.value || '';
+
+    journal.push({
+      id: Date.now() + i,
+      date: currentParsed.date || new Date().toISOString().split('T')[0],
+      name: t.name,
+      type: t.type,
+      quantity: t.quantity,
+      amount: t.amount,
+      checks,
+      memo,
+      savedAt: new Date().toISOString()
+    });
+  });
+
+  saveJournal(journal);
+
+  const btn = document.querySelector('.save-all-btn');
+  btn.textContent = '✓ 저장 완료!';
+  btn.style.background = '#00e676';
+  setTimeout(() => {
+    btn.textContent = '📋 매매일지에 저장';
+    btn.style.background = '';
+  }, 2000);
+}
+
+// ── Render Journal ──
+function renderJournal() {
+  const journal = loadJournal();
+  const container = document.getElementById('journalContent');
+
+  if (journal.length === 0) {
+    container.innerHTML = `
+      <div class="empty-journal">
+        아직 기록이 없어요.<br>
+        📸 캡처 분석 탭에서 매매내역을 올려주세요.
+      </div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  journal.forEach(entry => {
+    if (!groups[entry.date]) groups[entry.date] = [];
+    groups[entry.date].push(entry);
+  });
+
+  const sortedDates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+
+  container.innerHTML = sortedDates.map(date => {
+    const entries = groups[date];
+    const buys = entries.filter(e => e.type === '매수').length;
+    const sells = entries.filter(e => e.type === '매도').length;
+
+    return `
+      <div class="date-group">
+        <div class="date-label">
+          <span>${date}</span>
+          <div class="date-summary">
+            <span class="up">매수 ${buys}</span>
+            <span class="down">매도 ${sells}</span>
+          </div>
+        </div>
+        ${entries.map(entry => `
+          <div>
+            <div class="journal-row">
+              <span class="j-type ${entry.type === '매수' ? 'type-buy' : 'type-sell'}">${entry.type}</span>
+              <div class="j-name">${entry.name}</div>
+              <div class="j-nums">
+                <div class="j-qty">${entry.quantity}주</div>
+                <div class="j-amount">${entry.amount > 0 ? entry.amount.toLocaleString() + '원' : '-'}</div>
+              </div>
+            </div>
+            ${entry.checks.some(c => c !== undefined) ? `
+              <div class="j-checks">
+                ${PRINCIPLES.map((p, pi) => `
+                  <span class="check-tag ${entry.checks[pi] ? 'check-ok' : 'check-no'}">
+                    ${entry.checks[pi] ? '✓' : '✗'} P${pi+1}
+                  </span>
+                `).join('')}
+              </div>
+            ` : ''}
+            ${entry.memo ? `<div class="j-memo">"${entry.memo}"</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Render Stats ──
+function renderStats() {
+  const journal = loadJournal();
+
+  document.getElementById('st-total').textContent = journal.length;
+  document.getElementById('st-buy').textContent = journal.filter(e => e.type === '매수').length;
+  document.getElementById('st-sell').textContent = journal.filter(e => e.type === '매도').length;
+  document.getElementById('st-days').textContent = new Set(journal.map(e => e.date)).size;
+
+  // Principle stats
+  const psContainer = document.getElementById('principleStats');
+  if (journal.length === 0) {
+    psContainer.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">기록이 쌓이면 원칙 준수율이 표시돼요</div>';
+    return;
+  }
+
+  psContainer.innerHTML = PRINCIPLES.map((p, pi) => {
+    const checked = journal.filter(e => e.checks && e.checks[pi]).length;
+    const pct = journal.length > 0 ? Math.round((checked / journal.length) * 100) : 0;
+    return `
+      <div class="ps-bar">
+        <div class="ps-label">
+          <span>P${pi+1}. ${p}</span>
+          <span>${pct}%</span>
+        </div>
+        <div class="ps-track">
+          <div class="ps-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Clear ──
+function clearAll() {
+  if (confirm('모든 매매일지를 삭제할까요?')) {
+    localStorage.removeItem('etf_journal_v1');
+    renderJournal();
+  }
+}
+</script>
+</body>
+</html>
